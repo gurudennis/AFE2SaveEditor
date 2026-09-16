@@ -1,0 +1,6 @@
+[submodule "ThirdParty/cxxopts"]
+	path = ThirdParty/cxxopts
+	url = https://github.com/jarro2783/cxxopts.git
+[submodule "ThirdParty/nlohmann_json"]
+	path = ThirdParty/nlohmann_json
+	url = https://github.com/nlohmann/json.git

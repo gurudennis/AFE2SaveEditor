@@ -11,4 +11,22 @@
       <Filter>Root</Filter>
     </ClCompile>
   </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="Version.hpp">
+      <Filter>Root</Filter>
+    </ClInclude>
+    <ClInclude Include="resource.h">
+      <Filter>Root</Filter>
+    </ClInclude>
+  </ItemGroup>
+  <ItemGroup>
+    <ResourceCompile Include="AFE2SaveEditor.rc">
+      <Filter>Root</Filter>
+    </ResourceCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <Image Include="icon.ico">
+      <Filter>Root</Filter>
+    </Image>
+  </ItemGroup>
 </Project>

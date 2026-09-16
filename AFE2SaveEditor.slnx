@@ -4,6 +4,7 @@
     <Platform Name="x86" />
   </Configurations>
   <Folder Name="/Global/">
+    <File Path="LICENSE.txt" />
     <File Path="README.md" />
   </Folder>
   <Project Path="AFE2Save/AFE2Save.vcxproj" />
