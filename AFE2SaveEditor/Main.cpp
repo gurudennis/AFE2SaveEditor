@@ -118,10 +118,11 @@ private:
         CommandPrototype commandPrototypes[] = {
             {"h",  "help",       "Show available commands",  0, [this](const Command& cmd) { showAdvancedHelp(); return true; }},
             {"m",  "summary",    "Show save summary",        0, [this](const Command& cmd) { showSaveSummary(); return true; }},
-            {"a",  "unlock_all", "Unlock everything",        0, [this](const Command& cmd) { unlockEverything(); return true; }},
+            {"u",  "unlock_all", "Unlock everything",        0, [this](const Command& cmd) { unlockEverything(); return true; }},
+            {"i",  "import_all", "Import everything",        0, [this](const Command& cmd) { importEverything(cmd); return true; }},
             {"l",  "load",       "Load a save",              0, [this](const Command& cmd) { load(cmd); return true; }},
             {"s",  "save",       "Save the changes",         0, [this](const Command& cmd) { save(cmd); return true; }},
-            {"x",  "exit",       "Exit the app",             0, [this](const Command& cmd) { return false; }},
+            {"x",  "exit",       "Exit the app",             0, [this](const Command& cmd) { return exit(); }},
         };
         commandPrototypes_.reserve(std::size(commandPrototypes));
         for (auto& cmd : commandPrototypes) {
@@ -162,12 +163,27 @@ private:
     }
 
     void showSaveSummary() {
-        std::cout << "Save summary:" << std::endl << std::endl;
-        std::cout << save_->getJSON() << std::endl; // placeholder
+        AFE2S::SaveState::Info info = save_->getInfo();
+        std::cout << "Save summary:" << std::endl
+                  << "Account ID: " << info.accountID << std::endl
+                  << "Reward packs: " << info.rewardPackCount << std::endl
+                  << "Guns: " << info.gunCount << std::endl
+                  << "Gun mods: " << info.gunModCount << std::endl
+                  << "Cosmetics: " << info.cosmeticCount << std::endl;
     }
 
     void unlockEverything() {
         std::cout << "Unlock everything: not implemented yet." << std::endl << std::endl;
+    }
+
+    void importEverything(const std::string& templPath) {
+        save_->importFrom(AFE2S::readSaveFile(templPath));
+        std::cout << "Imported everything from \"" << templPath << "\"" << std::endl;
+    }
+
+    void importEverything(const Command& cmd) {
+        std::string path = cmd.getArg<std::string>(0, "template save path");
+        importEverything(path);
     }
 
     void load(const std::string& path = {}) {
@@ -184,6 +200,9 @@ private:
     }
 
     void load(const Command& cmd) {
+        if (!warnDirty()) {
+            return;
+        }
         std::string path = cmd.getArg<std::string>(0, "path (empty for default)");
         load(path);
     }
@@ -200,6 +219,24 @@ private:
     void save(const Command& cmd) {
         std::string path = cmd.getArg<std::string>(0, "path (empty to overwrite; [...].json to save as JSON)");
         save(path);
+    }
+
+    bool exit() {
+        if (!warnDirty()) {
+            return true;
+        }
+        return false;
+    }
+
+    bool warnDirty() {
+        if (save_ && save_->isDirty()) {
+            std::cout << "Warning: unsaved changes exist. Do you want to continue? (y/n): ";
+            std::cout.flush();
+            char c = _getch();
+            std::cout << c << std::endl;
+            return c == 'y' || c == 'Y';
+        }
+        return true;
     }
 
 private:

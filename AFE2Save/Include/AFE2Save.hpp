@@ -28,9 +28,21 @@ public:
     SaveState(SaveState&&) noexcept;
     SaveState& operator=(SaveState&&) noexcept;
 
+    bool isDirty() const;
+    void resetDirty() const;
+
     std::string getJSON() const;
 
-    // ...
+    struct Info {
+        std::string accountID{};
+        uint32_t rewardPackCount{};
+        uint32_t gunCount{};
+        uint32_t gunModCount{};
+        uint32_t cosmeticCount{};
+    };
+    Info getInfo() const;
+
+    void importFrom(const SaveState& templ);
 
 private:
     std::unique_ptr<Impl::SaveStateImpl> impl_;

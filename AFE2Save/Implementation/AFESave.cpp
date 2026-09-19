@@ -92,13 +92,35 @@ public:
         : json_(nlohmann::json::parse(jsonStr)) {
     }
 
+    bool isDirty() const {
+        return isDirty_;
+    }
+
+    void resetDirty() const {
+        isDirty_ = false;
+    }
+
     std::string getJSON() const {
         return json_.dump(jsonIndentSize, jsonIndentChar);
     }
 
-    // ...
+    SaveState::Info getInfo() const {
+        SaveState::Info info{};
+        info.accountID = json_["AccountId"].get<std::string>();
+        info.rewardPackCount = uint32_t(json_["RewardPackInventory"]["RewardPacks"].size());
+        info.gunCount = uint32_t(json_["GunInventory"]["GunFrames"].size());
+        info.gunModCount = uint32_t(json_["ModInventory"]["UnlimitedModStorage"].size());
+        info.cosmeticCount = uint32_t(json_["GeneralInventory"]["Items"].size());
+        return info;
+    }
+
+    void importFrom(const SaveState& templ) {
+        // ...
+        isDirty_ = true;
+    }
 
 private:
+    mutable bool isDirty_{};
     nlohmann::json json_;
 };
 
@@ -116,8 +138,24 @@ SaveState::~SaveState() = default;
 SaveState::SaveState(SaveState&&) noexcept = default;
 SaveState& SaveState::operator=(SaveState&&) noexcept = default;
 
+bool SaveState::isDirty() const {
+    return impl_->isDirty();
+}
+
+void SaveState::resetDirty() const {
+    impl_->resetDirty();
+}
+
 std::string SaveState::getJSON() const {
     return impl_->getJSON();
+}
+
+SaveState::Info SaveState::getInfo() const {
+    return impl_->getInfo();
+}
+
+void SaveState::importFrom(const SaveState& templ) {
+    impl_->importFrom(templ);
 }
 
 //
@@ -142,6 +180,7 @@ SaveState readSaveFile(const std::filesystem::path& path) {
 
 void writeSaveFile(const std::filesystem::path& path, const SaveState& save) {
     SaveFileUtils::writeSaveFile(path, SaveFileUtils::encryptSave(save.getJSON(), path.extension() == ".json"));
+    save.resetDirty();
 }
 
 } // namespace AFE2S
