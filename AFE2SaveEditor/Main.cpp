@@ -46,6 +46,10 @@ private:
             T value{};
             std::istringstream iss(str);
             iss >> value;
+            if (!value.empty() && value.front() == '\"' && value.back() == '\"') { // quotes not supported, and simply ignored
+                value.pop_back();
+                value.erase(value.begin());
+            }
             return value;
         }
     };
@@ -59,10 +63,6 @@ private:
         iss >> cmd.name;
         std::string arg;
         while (iss >> arg) {
-            if (!arg.empty() && arg.front() == '\"' && arg.back() == '\"') { // quotes not supported, and simply ignored
-                arg.pop_back();
-                arg.erase(arg.begin());
-            }
             cmd.args.push_back(arg);
         }
         return cmd;
@@ -166,10 +166,10 @@ private:
         AFE2S::SaveState::Info info = save_->getInfo();
         std::cout << "Save summary:" << std::endl
                   << "Account ID: " << info.accountID << std::endl
-                  << "Reward packs: " << info.rewardPackCount << std::endl
-                  << "Guns: " << info.gunCount << std::endl
-                  << "Gun mods: " << info.gunModCount << std::endl
-                  << "Cosmetics: " << info.cosmeticCount << std::endl;
+                  << "Reward packs: " << info.categoryStats.rewardPackCount << std::endl
+                  << "Guns: " << info.categoryStats.gunCount << std::endl
+                  << "Gun mods: " << info.categoryStats.gunModCount << std::endl
+                  << "Cosmetics: " << info.categoryStats.cosmeticCount << std::endl;
     }
 
     void unlockEverything() {
@@ -177,8 +177,11 @@ private:
     }
 
     void importEverything(const std::string& templPath) {
-        save_->importFrom(AFE2S::readSaveFile(templPath));
-        std::cout << "Imported everything from \"" << templPath << "\"" << std::endl;
+        AFE2S::SaveState::CategoryStats stats = save_->importFrom(AFE2S::readSaveFile(templPath));
+        std::cout << "Imported everything from \"" << templPath << "\":" << std::endl
+                  << "  Reward packs: " << stats.rewardPackCount << std::endl
+                  << "  Gun mods: " << stats.gunModCount << std::endl
+                  << "  Cosmetics: " << stats.cosmeticCount << std::endl;
     }
 
     void importEverything(const Command& cmd) {

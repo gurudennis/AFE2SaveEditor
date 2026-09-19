@@ -33,16 +33,20 @@ public:
 
     std::string getJSON() const;
 
-    struct Info {
-        std::string accountID{};
+    struct CategoryStats {
         uint32_t rewardPackCount{};
         uint32_t gunCount{};
         uint32_t gunModCount{};
         uint32_t cosmeticCount{};
     };
+
+    struct Info {
+        std::string accountID{};
+        CategoryStats categoryStats{};
+    };
     Info getInfo() const;
 
-    void importFrom(const SaveState& templ);
+    CategoryStats importFrom(const SaveState& templ);
 
 private:
     std::unique_ptr<Impl::SaveStateImpl> impl_;

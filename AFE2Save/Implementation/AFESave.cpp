@@ -5,6 +5,7 @@
 #include <algorithm>
 #include <format>
 #include <fstream>
+#include <iostream>
 
 namespace AFE2S {
 
@@ -107,16 +108,63 @@ public:
     SaveState::Info getInfo() const {
         SaveState::Info info{};
         info.accountID = json_["AccountId"].get<std::string>();
-        info.rewardPackCount = uint32_t(json_["RewardPackInventory"]["RewardPacks"].size());
-        info.gunCount = uint32_t(json_["GunInventory"]["GunFrames"].size());
-        info.gunModCount = uint32_t(json_["ModInventory"]["UnlimitedModStorage"].size());
-        info.cosmeticCount = uint32_t(json_["GeneralInventory"]["Items"].size());
+        info.categoryStats.rewardPackCount = uint32_t(getRewardPacks(json_).size());
+        info.categoryStats.gunCount = uint32_t(json_["GunInventory"]["GunFrames"].size());
+        info.categoryStats.gunModCount = uint32_t(getGunMods(json_).size());
+        info.categoryStats.cosmeticCount = uint32_t(getCosmetics(json_).size());
         return info;
     }
 
-    void importFrom(const SaveState& templ) {
-        // ...
+    SaveState::CategoryStats importFrom(const Impl::SaveStateImpl& templ) {
+        SaveState::CategoryStats stats{};
+        stats.rewardPackCount = importSection(getRewardPacks(json_), getRewardPacks(templ.json_), [](const nlohmann::json& item) {
+            return item["RewardPackClass"].get<std::string>();
+        });
+        stats.gunModCount = importSection(getGunMods(json_), getGunMods(templ.json_), [](const nlohmann::json& item) {
+            return item["ModDef"].get<std::string>();
+        });
+        stats.cosmeticCount = importSection(getCosmetics(json_), getCosmetics(templ.json_), [](const nlohmann::json& item) {
+            return item["Class"].get<std::string>();
+        });
         isDirty_ = true;
+        return stats;
+    }
+
+private:
+    static auto& getRewardPacks(auto& json) {
+        return json["RewardPackInventory"]["RewardPacks"];
+    }
+
+    static auto& getGunMods(auto& json) {
+        return json["ModInventory"]["UnlimitedModStorage"];
+    }
+
+    static auto& getCosmetics(auto& json) {
+        return json["GeneralInventory"]["Items"];
+    }
+
+    template <typename KeyExtractor>
+    static uint32_t importSection(nlohmann::json& target, const nlohmann::json& source, KeyExtractor&& keyExtractor) {
+        uint32_t addedCount = 0;
+        for (const auto& item : source) {
+            auto key = keyExtractor(item);
+            if constexpr (std::is_same_v<decltype(key), std::string>) {
+                if (key.empty()) {
+                    continue;
+                }
+            }
+            auto it = std::find_if(target.begin(), target.end(), [&key, &keyExtractor](const nlohmann::json& existingItem) {
+                return keyExtractor(existingItem) == key;
+            });
+            if (it == target.end()) {
+                ++addedCount;
+#ifdef _DEBUG
+                std::cout << "Imported: " << key << std::endl;
+#endif
+                target.emplace_back(item);
+            }
+        }
+        return addedCount;
     }
 
 private:
@@ -154,8 +202,8 @@ SaveState::Info SaveState::getInfo() const {
     return impl_->getInfo();
 }
 
-void SaveState::importFrom(const SaveState& templ) {
-    impl_->importFrom(templ);
+AFE2S::SaveState::CategoryStats SaveState::importFrom(const SaveState& templ) {
+    return impl_->importFrom(*templ.impl_);
 }
 
 //
