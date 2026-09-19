@@ -132,7 +132,9 @@ std::filesystem::path getDefaultSaveFilePath() {
 SaveState readSaveFile(const std::filesystem::path& path) {
     std::string jsonStr = SaveFileUtils::decryptSave(SaveFileUtils::readSaveFile(path), path.extension() == ".json");
 #ifdef _DEBUG
-    SaveFileUtils::writeSaveFile(path.string() + ".json", SaveFileUtils::encryptSave(jsonStr, true));
+    if (path.extension() == ".sav") {
+        SaveFileUtils::writeSaveFile(path.string() + ".json", SaveFileUtils::encryptSave(jsonStr, true));
+    }
 #endif
 
     return SaveState(jsonStr);

@@ -59,6 +59,10 @@ private:
         iss >> cmd.name;
         std::string arg;
         while (iss >> arg) {
+            if (!arg.empty() && arg.front() == '\"' && arg.back() == '\"') { // quotes not supported, and simply ignored
+                arg.pop_back();
+                arg.erase(arg.begin());
+            }
             cmd.args.push_back(arg);
         }
         return cmd;
