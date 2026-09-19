@@ -43,28 +43,32 @@ void writeSaveFile(const std::filesystem::path& path, std::span<const std::byte>
     file.write(reinterpret_cast<const char*>(data.data()), data.size());
 }
 
-std::vector<std::byte> encryptSave(std::string_view data) {
+std::vector<std::byte> encryptSave(std::string_view data, bool no_op) {
     if (data.empty()) {
         return {};
     }
 
     std::vector<std::byte> res;
     res.reserve(data.size());
-    std::transform(data.cbegin(), data.cend() - 1, std::back_inserter(res), [](char c) { return std::byte(c) ^ xorKey; });
+    std::transform(data.cbegin(), data.cend() - 1, std::back_inserter(res), [no_op](char c) {
+        return no_op ? std::byte(c) : std::byte(c) ^ xorKey;
+    });
 
     res.emplace_back(std::byte(data.back())); // obfuscation: the last byte isn't XOR'd
 
     return res;
 }
 
-std::string decryptSave(std::span<const std::byte> data) {
+std::string decryptSave(std::span<const std::byte> data, bool no_op) {
     if (data.empty()) {
         return {};
     }
 
     std::string res;
     res.reserve(data.size());
-    std::transform(data.begin(), data.end() - 1, std::back_inserter(res), [](std::byte c) { return char(c ^ xorKey); });
+    std::transform(data.begin(), data.end() - 1, std::back_inserter(res), [no_op](std::byte c) {
+        return char(no_op ? c : c ^ xorKey);
+    });
 
     res += char(data.back()); // obfuscation: the last byte isn't XOR'd
 
@@ -77,7 +81,8 @@ namespace Impl {
 
 namespace {
 
-static constexpr size_t jsonIndent = 4;
+static constexpr size_t jsonIndentSize = 1;
+static constexpr char jsonIndentChar = '\t';
 
 } // anonymous namespace
 
@@ -88,7 +93,7 @@ public:
     }
 
     std::string getJSON() const {
-        return json_.dump(jsonIndent);
+        return json_.dump(jsonIndentSize, jsonIndentChar);
     }
 
     // ...
@@ -108,6 +113,8 @@ SaveState::SaveState(std::string_view json)
 }
 
 SaveState::~SaveState() = default;
+SaveState::SaveState(SaveState&&) noexcept = default;
+SaveState& SaveState::operator=(SaveState&&) noexcept = default;
 
 std::string SaveState::getJSON() const {
     return impl_->getJSON();
@@ -123,11 +130,16 @@ std::filesystem::path getDefaultSaveFilePath() {
 }
 
 SaveState readSaveFile(const std::filesystem::path& path) {
-    return SaveState(SaveFileUtils::decryptSave(SaveFileUtils::readSaveFile(path)));
+    std::string jsonStr = SaveFileUtils::decryptSave(SaveFileUtils::readSaveFile(path), path.extension() == ".json");
+#ifdef _DEBUG
+    SaveFileUtils::writeSaveFile(path.string() + ".json", SaveFileUtils::encryptSave(jsonStr, true));
+#endif
+
+    return SaveState(jsonStr);
 }
 
 void writeSaveFile(const std::filesystem::path& path, const SaveState& save) {
-    SaveFileUtils::writeSaveFile(path, SaveFileUtils::encryptSave(save.getJSON()));
+    SaveFileUtils::writeSaveFile(path, SaveFileUtils::encryptSave(save.getJSON(), path.extension() == ".json"));
 }
 
 } // namespace AFE2S

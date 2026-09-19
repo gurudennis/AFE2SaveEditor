@@ -7,6 +7,6 @@
     <File Path="LICENSE.txt" />
     <File Path="README.md" />
   </Folder>
-  <Project Path="AFE2Save/AFE2Save.vcxproj" />
-  <Project Path="AFE2SaveEditor/AFE2SaveEditor.vcxproj" />
+  <Project Path="AFE2Save/AFE2Save.vcxproj" Id="951404c4-6fe1-4c4d-ad42-3e0fdae08533" />
+  <Project Path="AFE2SaveEditor/AFE2SaveEditor.vcxproj" Id="46b6686d-a565-4189-ba88-98a85ef972e8" />
 </Solution>
