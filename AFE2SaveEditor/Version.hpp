@@ -1,3 +1,3 @@
 #pragma once
 
-#define AFE2SAVEEDITOR_VERSION "1.0.0.1"
+#define AFE2SAVEEDITOR_VERSION "0.0.1.0"

@@ -1,5 +1,6 @@
 <Solution>
   <Configurations>
+    <Platform Name="Any CPU" />
     <Platform Name="x64" />
     <Platform Name="x86" />
   </Configurations>
@@ -9,4 +10,5 @@
   </Folder>
   <Project Path="AFE2Save/AFE2Save.vcxproj" Id="951404c4-6fe1-4c4d-ad42-3e0fdae08533" />
   <Project Path="AFE2SaveEditor/AFE2SaveEditor.vcxproj" Id="46b6686d-a565-4189-ba88-98a85ef972e8" />
+  <Project Path="PrepRelease/PrepRelease.csproj" Id="42ffb448-34cf-48ef-9c15-db104dc7f963" />
 </Solution>
