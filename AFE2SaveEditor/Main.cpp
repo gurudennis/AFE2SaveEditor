@@ -86,8 +86,10 @@ private:
                       << "Options:" << std::endl
                       << "1. Show save summary" << std::endl
                       << "2. Unlock everything" << std::endl
-                      << "3. Advanced mode" << std::endl
-                      << "4. Exit" << std::endl
+                      << "3. Restore recent backup" << std::endl
+                      << "4. Restore oldest backup" << std::endl
+                      << "5. Advanced mode" << std::endl
+                      << "6. Exit" << std::endl
                       << std::endl
                       << "Press a number key to select an option... ";
             std::cout.flush();
@@ -102,11 +104,17 @@ private:
                 save();
                 break;
             case '3':
+                restoreBackup(Command{ "restore_bak", {"newest"} });
+                break;
+            case '4':
+                restoreBackup(Command{ "restore_bak", {"oldest"} });
+                break;
+            case '5':
                 if (!interactiveAdvanced()) {
                     exit = true;
                 }
                 break;
-            case '4':
+            case '6':
                 exit = true;
                 break;
             }
@@ -119,13 +127,14 @@ private:
 
     void setupCommandPrototypes() {
         CommandPrototype commandPrototypes[] = {
-            {"h",  "help",       "Show available commands",  0, [this](const Command& cmd) { showAdvancedHelp(); return true; }},
-            {"m",  "summary",    "Show save summary",        0, [this](const Command& cmd) { showSaveSummary(); return true; }},
-            {"u",  "unlock_all", "Unlock everything",        0, [this](const Command& cmd) { unlockEverything(); return true; }},
-            {"i",  "import_all", "Import everything",        0, [this](const Command& cmd) { importEverything(cmd); return true; }},
-            {"l",  "load",       "Load a save",              0, [this](const Command& cmd) { load(cmd); return true; }},
-            {"s",  "save",       "Save the changes",         0, [this](const Command& cmd) { save(cmd); return true; }},
-            {"x",  "exit",       "Exit the app",             0, [this](const Command& cmd) { return exit(); }},
+            {"h",  "help",        "Show available commands",  0, [this](const Command& cmd) { showAdvancedHelp(); return true; }},
+            {"m",  "summary",     "Show save summary",        0, [this](const Command& cmd) { showSaveSummary(); return true; }},
+            {"u",  "unlock_all",  "Unlock everything",        0, [this](const Command& cmd) { unlockEverything(); return true; }},
+            {"i",  "import_all",  "Import everything",        0, [this](const Command& cmd) { importEverything(cmd); return true; }},
+            {"l",  "load",        "Load a save",              0, [this](const Command& cmd) { load(cmd); return true; }},
+            {"s",  "save",        "Save the changes",         0, [this](const Command& cmd) { save(cmd); return true; }},
+            {"r",  "restore_bak", "Restore a backup",         0, [this](const Command& cmd) { restoreBackup(cmd); return true; }},
+            {"x",  "exit",        "Exit the app",             0, [this](const Command& cmd) { return exit(); }},
         };
         commandPrototypes_.reserve(std::size(commandPrototypes));
         for (auto& cmd : commandPrototypes) {
@@ -196,7 +205,7 @@ private:
         importEverything(path);
     }
 
-    void load(const std::string& path = {}) {
+    void load(const std::filesystem::path& path = {}) {
         std::filesystem::path loadPath = path;
         if (loadPath.empty()) {
             loadPath = AFE2S::getDefaultSaveFilePath();
@@ -229,6 +238,34 @@ private:
     void save(const Command& cmd) {
         std::string path = cmd.getArg<std::string>(0, "path (empty to overwrite; [...].json to save as JSON)");
         save(path);
+    }
+
+    void restoreBackup(const Command& cmd) {
+        if (!warnDirty()) {
+            return;
+        }
+
+        std::cout << "You will LOSE ALL PROGRESS since the backup was taken. Are you absolutely sure? (y/n): ";
+        std::cout.flush();
+        char c = _getch();
+        std::cout << c << std::endl;
+        if (c != 'y' && c != 'Y') {
+            return;
+        }
+
+        std::string typeStr = cmd.getArg<std::string>(0, "backup type (newest/oldest)");
+        AFE2S::BackupType type{};
+        if (typeStr == "newest") {
+            type = AFE2S::BackupType::Newest;
+        } else if (typeStr == "oldest") {
+            type = AFE2S::BackupType::Oldest;
+        } else {
+            throw std::invalid_argument("Invalid backup type: " + typeStr);
+        }
+        AFE2S::restoreBackup(type, savePath_);
+        std::cout << "Restored " << typeStr << " backup to \"" << savePath_ << "\"" << std::endl;
+        
+        load(savePath_);
     }
 
     bool exit() {
@@ -279,7 +316,9 @@ private:
 int main(int argc, const char** argv) {
     constexpr const char* appName = "AFE2SaveEditor v." AFE2SAVEEDITOR_VERSION;
     constexpr const char* appDescription = "Save editor for Aliens Fireteam Elite 2 (the game)";
-    std::cout << appName << std::endl << appDescription << std::endl;
+    std::cout << appName << std::endl
+              << appDescription << std::endl
+              << "USE AT YOUR OWN RISK!" << std::endl;
 
     try {
         cxxopts::Options options("");

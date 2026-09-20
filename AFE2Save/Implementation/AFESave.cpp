@@ -1,3 +1,6 @@
+#include <windows.h>
+#include <shlobj.h>
+
 #include <AFE2Save.hpp>
 
 #include <nlohmann/json.hpp>
@@ -243,7 +246,83 @@ AFE2S::SaveState::CategoryStats SaveState::importFrom(const SaveState& templ) {
 }
 
 //
-// Free functions
+// Free functions: backup management
+//
+
+namespace {
+
+std::filesystem::path getBackupDirectory() {
+    std::filesystem::path path{};
+
+    wchar_t* rawPath{};
+    HRESULT hr = SHGetKnownFolderPath(FOLDERID_LocalAppData, KF_FLAG_DEFAULT, nullptr, &rawPath);
+    if (SUCCEEDED(hr) && rawPath && *rawPath) {
+        path = std::filesystem::path(rawPath);
+    }
+    if (rawPath != nullptr) {
+        CoTaskMemFree(rawPath);
+    }
+
+    path = path / "AFE2Save" / "Backups";
+    std::filesystem::create_directories(path);
+
+    return path;
+}
+
+static constexpr const char* oldBackupName = "old.char.sav";
+static constexpr const char* newBackupName = "new.char.sav";
+
+std::filesystem::path getBackupFilePath(BackupType type, bool allowNonexistent = false, bool findSubstitute = true) {
+    std::filesystem::path file;
+
+    std::filesystem::path root = getBackupDirectory();
+    switch (type) {
+    case BackupType::Oldest:
+        file = root / oldBackupName;
+        break;
+    case BackupType::Newest:
+        file = root / newBackupName;
+        break;
+    default:
+        throw std::invalid_argument("Invalid BackupType");
+    }
+
+    if (std::filesystem::exists(file) || allowNonexistent) {
+        return file;
+    }
+
+    if (!findSubstitute) {
+        throw std::invalid_argument("Backup not found");
+    }
+
+    return type == BackupType::Oldest ?
+        getBackupFilePath(BackupType::Newest, false, false) :
+        getBackupFilePath(BackupType::Oldest, false, false);
+}
+
+void makeBackup(const std::filesystem::path& path) {
+    std::filesystem::path backupPath = getBackupFilePath(isBackupAvailable() ? BackupType::Newest : BackupType::Oldest, true, false);
+    std::filesystem::copy_file(path, backupPath, std::filesystem::copy_options::overwrite_existing);
+}
+
+} // anonymous namespace
+
+bool isBackupAvailable() {
+    try {
+        std::ignore = getBackupFilePath(BackupType::Newest);
+        return true;
+    } catch (const std::exception&) {
+    }
+    return false;
+}
+
+void restoreBackup(BackupType type, const std::filesystem::path& path) {
+    std::filesystem::path backupPath = getBackupFilePath(type);
+    std::filesystem::copy_file(backupPath, path, std::filesystem::copy_options::overwrite_existing);
+}
+
+//
+// Free functions: save management
 //
 
 std::filesystem::path getDefaultSaveFilePath() {
@@ -263,6 +342,7 @@ SaveState readSaveFile(const std::filesystem::path& path) {
 }
 
 void writeSaveFile(const std::filesystem::path& path, const SaveState& save) {
+    makeBackup(path);
     SaveFileUtils::writeSaveFile(path, SaveFileUtils::encryptSave(save.getJSON(), path.extension() == ".json"));
     save.resetDirty();
 }

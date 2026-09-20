@@ -30,6 +30,8 @@
     </Image>
   </ItemGroup>
   <ItemGroup>
-    <None Include="template.json" />
+    <None Include="template.json">
+      <Filter>Root</Filter>
+    </None>
   </ItemGroup>
 </Project>

@@ -9,12 +9,20 @@
 
 namespace AFE2S {
 
+//
+// Low-level functions
+//
+
 namespace SaveFileUtils {
 std::vector<std::byte> readSaveFile(const std::filesystem::path& path);
 void writeSaveFile(const std::filesystem::path& path, std::span<const std::byte> data);
 std::vector<std::byte> encryptSave(std::string_view data, bool no_op = false);
 std::string decryptSave(std::span<const std::byte> data, bool no_op = false);
 } // namespace SaveFileUtils
+
+//
+// Save state management
+//
 
 namespace Impl {
 class SaveStateImpl;
@@ -52,8 +60,23 @@ private:
     std::unique_ptr<Impl::SaveStateImpl> impl_;
 };
 
+//
+// Save file management
+//
+
 std::filesystem::path getDefaultSaveFilePath();
 SaveState readSaveFile(const std::filesystem::path& path);
 void writeSaveFile(const std::filesystem::path& path, const SaveState& save);
+
+//
+// Backup management
+//
+
+enum class BackupType {
+    Newest,
+    Oldest
+};
+bool isBackupAvailable();
+void restoreBackup(BackupType type, const std::filesystem::path& path);
 
 } // namespace AFE2S
