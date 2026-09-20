@@ -251,7 +251,7 @@ AFE2S::SaveState::CategoryStats SaveState::importFrom(const SaveState& templ) {
 
 namespace {
 
-std::filesystem::path getBackupDirectory() {
+std::filesystem::path getLocalAppDataDirectory() {
     std::filesystem::path path{};
 
     wchar_t* rawPath{};
@@ -263,9 +263,13 @@ std::filesystem::path getBackupDirectory() {
         CoTaskMemFree(rawPath);
     }
 
+    return path;
+}
+
+std::filesystem::path getBackupDirectory() {
+    std::filesystem::path path = getLocalAppDataDirectory();
     path = path / "AFE2Save" / "Backups";
     std::filesystem::create_directories(path);
-
     return path;
 }
 
@@ -326,8 +330,27 @@ void restoreBackup(BackupType type, const std::filesystem::path& path) {
 //
 
 std::filesystem::path getDefaultSaveFilePath() {
-    // ...
-    return {};
+#ifdef _DEBUG
+    return "C:\\Prj\\AFE2SaveEditor\\x64\\char.sav";
+#endif
+
+    std::filesystem::path path = getLocalAppDataDirectory() / "AFE2" / "Saved" / "SaveGames";
+    if (!std::filesystem::exists(path) || !std::filesystem::is_directory(path)) {
+        throw std::runtime_error("Default save root not found: " + path.string());
+    }
+
+    for (auto iter = std::filesystem::directory_iterator(path); iter != std::filesystem::directory_iterator(); ++iter) {
+        if (!iter->is_directory()) {
+            continue;
+        }
+
+        std::filesystem::path saveFilePath = iter->path() / "char.sav";
+        if (std::filesystem::exists(saveFilePath)) {
+            return saveFilePath;
+        }
+    }
+
+    throw std::runtime_error("Save file not found in default save root: " + path.string());
 }
 
 SaveState readSaveFile(const std::filesystem::path& path) {
