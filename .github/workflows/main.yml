@@ -1,0 +1,34 @@
+name: Build .NET Framework and C++
+
+on:
+  push:
+    branches: [ "master" ]
+  pull_request:
+    branches: [ "master" ]
+
+jobs:
+  build:
+    runs-on: windows-latest
+
+    steps:
+    - uses: actions/checkout@v4
+      with:
+        submodules: true
+
+    - name: Setup MSBuild
+      uses: microsoft/setup-msbuild@v3 # Adds MSBuild.exe to the PATH
+
+    - name: Set up MSVC Developer Command Prompt
+      # This action automatically finds the live VS path and exports everything to GITHUB_ENV
+      uses: ilammy/msvc-dev-cmd@v1
+      with:
+        arch: x64
+
+    - name: Build Solution in Release
+      run: msbuild AFE2SaveEditor.slnx /p:Configuration=Release
+
+    - name: Upload Binaries in Release
+      uses: actions/upload-artifact@v4
+      with:
+        name: binary
+        path: x64\Release\AFE2SaveEditor.exe
