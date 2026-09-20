@@ -1,3 +1,5 @@
+#include <windows.h>
+
 #include <filesystem>
 #include <functional>
 #include <iostream>
@@ -10,6 +12,7 @@
 #include <AFE2Save.hpp>
 
 #include "Version.hpp"
+#include "resource.h"
 
 class App {
 public:
@@ -173,15 +176,19 @@ private:
     }
 
     void unlockEverything() {
-        std::cout << "Unlock everything: not implemented yet." << std::endl << std::endl;
+        AFE2S::SaveState::CategoryStats stats = save_->importFrom(AFE2S::SaveState(loadTemplate()));
+        std::cout << "Unlocked all known content:" << std::endl
+                  << "  New reward packs: " << stats.rewardPackCount << std::endl
+                  << "  New gun mods: " << stats.gunModCount << std::endl
+                  << "  New cosmetics: " << stats.cosmeticCount << std::endl;
     }
 
     void importEverything(const std::string& templPath) {
         AFE2S::SaveState::CategoryStats stats = save_->importFrom(AFE2S::readSaveFile(templPath));
         std::cout << "Imported everything from \"" << templPath << "\":" << std::endl
-                  << "  Reward packs: " << stats.rewardPackCount << std::endl
-                  << "  Gun mods: " << stats.gunModCount << std::endl
-                  << "  Cosmetics: " << stats.cosmeticCount << std::endl;
+                  << "  New reward packs: " << stats.rewardPackCount << std::endl
+                  << "  New gun mods: " << stats.gunModCount << std::endl
+                  << "  New cosmetics: " << stats.cosmeticCount << std::endl;
     }
 
     void importEverything(const Command& cmd) {
@@ -240,6 +247,26 @@ private:
             return c == 'y' || c == 'Y';
         }
         return true;
+    }
+
+    std::string loadTemplate() {
+        HRSRC hRes = FindResource(nullptr, MAKEINTRESOURCE(IDR_RC_SAVE_TEMPLATE1), TEXT("RC_SAVE_TEMPLATE"));
+        if (!hRes) {
+            throw std::runtime_error("Failed to find template resource.");
+        }
+
+        HGLOBAL hData = LoadResource(nullptr, hRes);
+        if (!hData) {
+            throw std::runtime_error("Failed to load template resource.");
+        }
+
+        DWORD size = SizeofResource(nullptr, hRes);
+        const char* data = reinterpret_cast<const char*>(LockResource(hData));
+        if (!data) {
+            throw std::runtime_error("Failed to lock template resource.");
+        }
+
+        return std::string(data, size);
     }
 
 private:

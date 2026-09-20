@@ -29,4 +29,7 @@
       <Filter>Root</Filter>
     </Image>
   </ItemGroup>
+  <ItemGroup>
+    <None Include="template.json" />
+  </ItemGroup>
 </Project>
