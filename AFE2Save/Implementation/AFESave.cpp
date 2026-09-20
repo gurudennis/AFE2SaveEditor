@@ -117,15 +117,9 @@ public:
 
     SaveState::CategoryStats importFrom(const Impl::SaveStateImpl& templ) {
         SaveState::CategoryStats stats{};
-        stats.rewardPackCount = importSection(getRewardPacks(json_), getRewardPacks(templ.json_), [](const nlohmann::json& item) {
-            return item["RewardPackClass"].get<std::string>();
-        });
-        stats.gunModCount = importSection(getGunMods(json_), getGunMods(templ.json_), [](const nlohmann::json& item) {
-            return item["ModDef"].get<std::string>();
-        });
-        stats.cosmeticCount = importSection(getCosmetics(json_), getCosmetics(templ.json_), [](const nlohmann::json& item) {
-            return item["Class"].get<std::string>();
-        });
+        stats.rewardPackCount = importSection(getRewardPacks(json_), getRewardPacks(templ.json_), getRewardPackKeyExtractor());
+        stats.gunModCount = importSection(getGunMods(json_), getGunMods(templ.json_), getGunModKeyExtractor());
+        stats.cosmeticCount = importSection(getCosmetics(json_), getCosmetics(templ.json_), getCosmeticKeyExtractor());
         isDirty_ = true;
         return stats;
     }
@@ -135,12 +129,36 @@ private:
         return json["RewardPackInventory"]["RewardPacks"];
     }
 
+    static std::string getRewardPackKey(const nlohmann::json& item) {
+        return item["RewardPackClass"].get<std::string>();
+    }
+
+    static auto getRewardPackKeyExtractor() {
+        return [](const nlohmann::json& item) { return getRewardPackKey(item); };
+    }
+
     static auto& getGunMods(auto& json) {
         return json["ModInventory"]["UnlimitedModStorage"];
     }
 
+    static std::string getGunModKey(const nlohmann::json& item) {
+        return item["ModDef"].get<std::string>();
+    }
+
+    static auto getGunModKeyExtractor() {
+        return [](const nlohmann::json& item) { return getGunModKey(item); };
+    }
+
     static auto& getCosmetics(auto& json) {
         return json["GeneralInventory"]["Items"];
+    }
+
+    static std::string getCosmeticKey(const nlohmann::json& item) {
+        return item["Class"].get<std::string>();
+    }
+
+    static auto getCosmeticKeyExtractor() {
+        return [](const nlohmann::json& item) { return getCosmeticKey(item); };
     }
 
     template <typename KeyExtractor>
@@ -165,6 +183,24 @@ private:
             }
         }
         return addedCount;
+    }
+
+    template <typename KeyExtractor>
+    static uint32_t countDuplicates(const nlohmann::json& json, KeyExtractor&& keyExtractor) {
+        uint32_t count = 0;
+        std::set<std::string> seenKeys;
+        for (const auto& item : json) {
+            auto key = keyExtractor(item);
+            if (seenKeys.find(key) != seenKeys.end()) {
+                ++count;
+#ifdef _DEBUG
+                std::cout << "Duplicate: " << key << std::endl;
+#endif
+            } else {
+                seenKeys.insert(key);
+            }
+        }
+        return count;
     }
 
 private:
